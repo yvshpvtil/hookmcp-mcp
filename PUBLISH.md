@@ -1,7 +1,8 @@
 # Publishing checklist (owner approval needed for each step)
-1. Redeploy /workspace/mcp-directory/hookmcp-site-v2.zip so https://hookmcp.com/api/v1/servers.json goes live (currently 404). Verify: `curl -sI https://hookmcp.com/api/v1/servers.json`, then `node --test test/` with HOOKMCP_TEST_DATA_URL set to that URL.
-2. Create the public GitHub repo yvshpvtil/hookmcp-mcp and push (git init; add; commit; remote; push).
-3. npm: create/log in to an account (2FA on), run `npm login`, then `npm publish --access public` (prepublishOnly runs the tests).
-4. Smoke test: `npx -y hookmcp-mcp` through the Inspector.
-5. Optional: publish to the official MCP Registry (mcp-publisher with server.json; mcpName io.github.yvshpvtil/hookmcp-mcp is already in package.json). Add/claim it on Glama for the score badge.
-6. Then open the PRs in /workspace/mcp-directory/launch/awesome-prs.md.
+
+0.1.0 is live on npm and GitHub. For 0.2.0:
+1. `npm test` (and with `HOOKMCP_TEST_DATA_URL=https://hookmcp.com/api/v1/servers.json`).
+2. Set the CHANGELOG date, then `npm publish --access public` (prepublishOnly runs the tests).
+3. Smoke test: `npx -y hookmcp-mcp@0.2.0 --version` and via the Inspector.
+4. Optional: `mcp-publisher login github && mcp-publisher publish` to submit server.json to the official MCP Registry (versions in server.json must match package.json; a test checks this).
+5. Optional: tag `v0.2.0` / GitHub release.

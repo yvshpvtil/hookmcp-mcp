@@ -90,7 +90,7 @@ claude mcp add hookmcp -- npx -y hookmcp-mcp
 
 Ask your assistant:
 - *"Search HookMCP for a Python Slack server with at least 100 stars."* → `search_servers { query: "slack", language: "python", min_stars: 100 }`
-- *"Give me the Windsurf config for the GitHub MCP server with my token."* → `get_install_config { slug: "github", client: "windsurf", env: { "GITHUB_PERSONAL_ACCESS_TOKEN": "…" } }`
+- *"Give me the Windsurf config for TrendRadar with my API key."* → `get_install_config { slug: "sansan0-trendradar", client: "windsurf", env: { "API_KEY": "…" } }`
 - *"What's trending in databases?"* → `trending_servers { category: "databases" }`
 
 Example `get_install_config` result (`client: "cursor"`):

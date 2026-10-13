@@ -1,0 +1,51 @@
+{
+  "name": "hookmcp-mcp",
+  "version": "0.1.0",
+  "description": "Read-only MCP server to search the HookMCP directory of 800+ MCP servers and get ready-to-paste configs for Claude Desktop, Cursor, VS Code and Claude Code.",
+  "type": "module",
+  "bin": {
+    "hookmcp-mcp": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc && chmod +x dist/index.js",
+    "test": "npm run build && node --test test/",
+    "prepublishOnly": "npm test"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "mcp-server",
+    "directory",
+    "claude",
+    "cursor",
+    "vscode"
+  ],
+  "homepage": "https://hookmcp.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yvshpvtil/hookmcp-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yvshpvtil/hookmcp-mcp/issues"
+  },
+  "author": "Yash Patil",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "mcpName": "io.github.yvshpvtil/hookmcp-mcp",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "typescript": "^5.9.3"
+  }
+}

@@ -14,7 +14,7 @@
   ],
   "scripts": {
     "build": "tsc && chmod +x dist/index.js",
-    "test": "npm run build && node --test test/",
+    "test": "npm run build && node --test test/*.test.mjs",
     "prepublishOnly": "npm test"
   },
   "keywords": [

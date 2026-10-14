@@ -18,10 +18,12 @@ Example prompts: *"Find a maintained Postgres MCP server that doesn't need an AP
 
 | Tool | What it does |
 |---|---|
-| `search_servers` | Typo-tolerant keyword search (`postgress`, `k8s` and plurals work) with `category`, `language`, `min_stars`, `remote`, `maintained` (commit ≤ 90 days), `no_key`, `official`, `one_click` filters and `limit` (≤ 50) |
+| `search_servers` | Typo-tolerant keyword search (`postgress`, `k8s` and plurals work) with `category`, `topic` (integration slug), `client` (e.g. `cursor`), `language`, `min_stars`, `remote`, `maintained` (commit ≤ 90 days), `no_key`, `official`, `one_click` filters and `limit` (≤ 50) |
 | `get_server` | Description, repo, license, install command (and where it came from), plus configs for every client. Accepts slug, hookmcp.com URL, GitHub URL or exact name |
 | `get_install_config` | Ready-to-paste config for one server and one client (`claude_desktop`, `cursor`, `vscode`, `windsurf`, `claude_code`) or all, optionally with `env` vars (API keys) filled in |
 | `list_categories` | Category ids, names and counts |
+| `list_integrations` | Integration pages (Postgres, GitHub, Slack, …) with slugs and URLs — use a slug as `topic` on `search_servers` |
+| `list_clients` | AI clients with setup guides (Cursor, Claude Desktop, …) — use a slug as `client` on `search_servers` |
 | `trending_servers` | Recently created repos ranked by stars per day (an approximation) |
 | `recently_updated` | Servers with the most recent commits |
 
@@ -62,7 +64,7 @@ Add to `.vscode/mcp.json`:
 ```
 
 ### Windsurf
-Add to `~/.codeium/windsurf/mcp_config.json`:
+Add via Cascade → Actions → Open MCP config file (often `~/.config/devin/mcp_config.json`; classic `~/.codeium/windsurf/mcp_config.json` also common):
 ```json
 {
   "mcpServers": {
@@ -92,6 +94,7 @@ Ask your assistant:
 - *"Search HookMCP for a Python Slack server with at least 100 stars."* → `search_servers { query: "slack", language: "python", min_stars: 100 }`
 - *"Give me the Windsurf config for TrendRadar with my API key."* → `get_install_config { slug: "sansan0-trendradar", client: "windsurf", env: { "API_KEY": "…" } }`
 - *"What's trending in databases?"* → `trending_servers { category: "databases" }`
+- *"List Postgres MCP servers for Cursor."* → `search_servers { topic: "postgres", client: "cursor" }`
 
 Example `get_install_config` result (`client: "cursor"`):
 ```json

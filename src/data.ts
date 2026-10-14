@@ -8,10 +8,13 @@ export interface Server {
   description: string | null; category: string; status: "maintained" | "aging" | "stale" | null;
   stars: number | null; official: boolean; remote_available: boolean; api_key_hint: boolean | null;
   license: string | null; language: string | null; clients_mentioned: string[]; topics: string[];
+  integrations?: string[];
   last_commit: string | null; created_at: string | null; install_command: string | null;
   install_source: string | null; config: { key: string; command: string; args: string[] } | null; url: string;
 }
-export interface Dataset { categories: Record<string, string>; servers: Server[]; fetchedAt: number; source: string; stale?: boolean }
+export interface Integration { slug: string; name: string; servers: number; url: string; blurb?: string }
+export interface ClientInfo { slug: string; name: string; label: string; servers: number; url: string; docs?: string; blurb?: string }
+export interface Dataset { categories: Record<string, string>; servers: Server[]; integrations?: Integration[]; clients?: ClientInfo[]; fetchedAt: number; source: string; stale?: boolean }
 
 export const DATA_URL = process.env.HOOKMCP_DATA_URL || "https://hookmcp.com/api/v1/servers.json";
 // Cloudflare's bot protection rejects some non-browser user agents, so identify as a browser-compatible client.
@@ -62,7 +65,7 @@ export async function getData(force = false): Promise<Dataset> {
       if (!force && !cache) { const disk = await readDisk(); if (disk && Date.now() - disk.fetchedAt < TTL_MS) return (cache = disk); }
       const j = await fetchJson(DATA_URL);
       validate(j);
-      cache = { categories: j.categories, servers: j.servers, fetchedAt: Date.now(), source: DATA_URL };
+      cache = { categories: j.categories, servers: j.servers, integrations: j.integrations || [], clients: j.clients || [], fetchedAt: Date.now(), source: DATA_URL };
       await writeDisk(cache);
       return cache;
     } catch (e) {

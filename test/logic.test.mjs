@@ -18,3 +18,14 @@ test("search: relevance beats stars", () => {
   const d = { categories: {}, servers: [mk({ name: "Big", description: "has redis", stars: 100000 }), mk({ name: "Redis", stars: 10 })] };
   assert.equal(search(d, { query: "redis" })[0].name, "Redis");
 });
+
+test("topic and client filters", () => {
+  const d = { categories: {}, integrations: [{ slug: "postgres", name: "PostgreSQL", servers: 1, url: "https://hookmcp.com/topics/postgres/" }], clients: [{ slug: "cursor", name: "Cursor", label: "Cursor", servers: 1, url: "https://hookmcp.com/clients/cursor/" }], servers: [
+    mk({ name: "Pg", integrations: ["postgres"], clients_mentioned: ["Cursor"], stars: 10 }),
+    mk({ name: "Other", integrations: ["slack"], clients_mentioned: ["VS Code"], stars: 99 }),
+  ] };
+  assert.equal(search(d, { topic: "postgres" }).length, 1);
+  assert.equal(search(d, { topic: "postgres" })[0].name, "Pg");
+  assert.equal(search(d, { client: "cursor" })[0].name, "Pg");
+  assert.equal(search(d, { client: "Cursor" })[0].name, "Pg");
+});

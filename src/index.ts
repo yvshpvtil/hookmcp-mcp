@@ -3,7 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { getData, DATA_URL, type Dataset } from "./data.js";
-import { search, summary, detail, findServer, categories, trending, recent, configs, suggestCategory, CLIENTS } from "./logic.js";
+import { search, summary, detail, findServer, categories, trending, recent, configs, suggestCategory, listIntegrations, listClients, suggestTopic, suggestClient, CLIENTS } from "./logic.js";
 import { VERSION } from "./version.js";
 
 const HELP = `hookmcp-mcp ${VERSION}
@@ -19,7 +19,7 @@ Environment:
   HOOKMCP_CACHE_TTL_MS   Cache lifetime in ms (default 21600000 = 6h)
   HOOKMCP_CACHE_FILE     On-disk cache path, or "off" (default ~/.cache/hookmcp-mcp/servers.json)
 
-Tools: search_servers, get_server, get_install_config, list_categories, trending_servers, recently_updated
+Tools: search_servers, get_server, get_install_config, list_categories, list_integrations, list_clients, trending_servers, recently_updated
 Docs: https://github.com/yvshpvtil/hookmcp-mcp`;
 
 const argv = process.argv.slice(2);
@@ -60,6 +60,8 @@ server.registerTool("search_servers", {
   title: "Search MCP servers",
   description: "Search the HookMCP directory (https://hookmcp.com) of 800+ MCP servers by keyword (typo-tolerant), category and filters. Returns matches ranked by relevance, then GitHub stars. Use get_install_config for ready-to-paste configs.",
   inputSchema: { query: z.string().optional().describe("Keywords, e.g. 'postgres' or 'browser automation'. Empty = top servers"), category: cat,
+    topic: z.string().optional().describe("Integration slug from list_integrations, e.g. 'postgres', 'slack', 'playwright'"),
+    client: z.string().optional().describe("AI client from list_clients, e.g. 'cursor', 'claude-desktop', 'vscode' (or display name)"),
     language: z.string().optional().describe("Implementation language, e.g. 'TypeScript', 'Python', 'Go' (case-insensitive)"),
     min_stars: z.number().int().min(0).optional().describe("Only servers with at least this many GitHub stars"),
     remote: z.boolean().optional().describe("Only servers that mention a hosted/remote endpoint"),
@@ -70,6 +72,21 @@ server.registerTool("search_servers", {
   annotations: ro,
 }, wrap((a, d) => {
   checkCategory(d, a.category);
+  if (a.topic) {
+    const known = listIntegrations(d).map(i => i.slug);
+    if (known.length && !known.includes(a.topic)) {
+      const sug = suggestTopic(d, a.topic);
+      throw new UserError(`Unknown topic "${a.topic}".${sug.length ? " Did you mean: " + sug.join(", ") + "?" : " Call list_integrations for valid slugs."}`);
+    }
+  }
+  if (a.client) {
+    const clients = listClients(d);
+    const ok = clients.some(c => c.slug === a.client!.toLowerCase() || c.label.toLowerCase() === a.client!.toLowerCase() || c.name.toLowerCase() === a.client!.toLowerCase());
+    if (clients.length && !ok) {
+      const sug = suggestClient(d, a.client);
+      throw new UserError(`Unknown client "${a.client}".${sug.length ? " Did you mean: " + sug.join(", ") + "?" : " Call list_clients for valid ids."}`);
+    }
+  }
   const r = search(d, a);
   return { count: r.length, results: r.map(s => summary(s, d)), ...(r.length ? {} : { hint: "No matches. Try fewer keywords or remove filters." }) };
 }));
@@ -100,6 +117,18 @@ server.registerTool("get_install_config", {
 
 server.registerTool("list_categories", { title: "List categories", description: "All HookMCP categories with ids and server counts.", inputSchema: {}, annotations: ro },
   wrap((_a, d) => categories(d)));
+
+server.registerTool("list_integrations", {
+  title: "List integrations",
+  description: "Integration landing pages on HookMCP (Postgres, GitHub, Slack, Playwright, …) with slugs, server counts and URLs. Pass a slug as the `topic` filter on search_servers.",
+  inputSchema: {}, annotations: ro,
+}, wrap((_a, d) => listIntegrations(d)));
+
+server.registerTool("list_clients", {
+  title: "List AI clients",
+  description: "AI clients with setup guides on HookMCP (Cursor, Claude Desktop, VS Code, …) with slugs, documented-server counts and URLs. Pass a slug as the `client` filter on search_servers.",
+  inputSchema: {}, annotations: ro,
+}, wrap((_a, d) => listClients(d)));
 
 server.registerTool("trending_servers", {
   title: "Trending MCP servers",

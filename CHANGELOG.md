@@ -4,7 +4,8 @@
 ### Added
 - `get_install_config` tool: ready-to-paste config for Claude Desktop, Cursor (+ deeplink), VS Code (+ deeplink), Windsurf and Claude Code, with optional `env` injection.
 - Windsurf configs in `get_server`.
-- `search_servers` filters: `language`, `min_stars`.
+- `search_servers` filters: `language`, `min_stars`, `topic` (integration slug) and `client` (AI client slug or name).
+- `list_integrations` and `list_clients` tools (backed by `/api/v1/servers.json` `integrations` / `clients` arrays).
 - Typo-tolerant search (edit distance), plural folding and aliases (`k8s`, `postgresql`, `gh`, …); popularity is now a log-scaled tiebreak so relevance wins.
 - On-disk cache (`~/.cache/hookmcp-mcp/servers.json`, `HOOKMCP_CACHE_FILE`) with TTL; serves the last good copy (with a note) when hookmcp.com is unreachable.
 - `--help` / `--version` CLI flags.

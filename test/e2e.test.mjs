@@ -15,9 +15,9 @@ before(async () => {
 });
 after(async () => { await client?.close(); });
 
-test("lists 6 read-only tools", async () => {
+test("lists 8 read-only tools", async () => {
   const { tools } = await client.listTools();
-  assert.deepEqual(tools.map(t => t.name).sort(), ["get_install_config", "get_server", "list_categories", "recently_updated", "search_servers", "trending_servers"]);
+  assert.deepEqual(tools.map(t => t.name).sort(), ["get_install_config", "get_server", "list_categories", "list_clients", "list_integrations", "recently_updated", "search_servers", "trending_servers"]);
   for (const t of tools) assert.equal(t.annotations?.readOnlyHint, true);
 });
 
@@ -63,6 +63,37 @@ test("list_categories", async () => {
   assert.ok(j.length >= 10);
   assert.ok(j.every(c => c.id && c.name && c.servers > 0 && c.url.startsWith("https://hookmcp.com/categories/")));
 });
+
+test("list_integrations and topic filter", async () => {
+  const { j } = await call("list_integrations");
+  assert.ok(j.length >= 10);
+  assert.ok(j.every(i => i.slug && i.name && i.servers > 0 && i.url.includes("/topics/")));
+  const slug = j.find(i => i.slug === "postgres")?.slug || j[0].slug;
+  const { j: r } = await call("search_servers", { topic: slug, limit: 20 });
+  assert.ok(r.count > 0);
+  const raw = JSON.parse(readFileSync(new URL("./fixtures/servers.json", import.meta.url))).servers;
+  for (const s of r.results) {
+    const x = raw.find(row => row.slug === s.slug);
+    assert.ok((x.integrations || []).includes(slug) || (x.topics || []).map(t => t.toLowerCase()).includes(slug), s.slug);
+  }
+  const { r: bad } = await call("search_servers", { topic: "not-a-real-topic-xyz" });
+  assert.equal(bad.isError, true);
+  assert.match(bad.content[0].text, /Unknown topic/);
+});
+
+test("list_clients and client filter", async () => {
+  const { j } = await call("list_clients");
+  assert.ok(j.length >= 5);
+  assert.ok(j.every(c => c.slug && c.name && c.servers > 0 && c.url.includes("/clients/")));
+  const { j: r } = await call("search_servers", { client: "cursor", limit: 20 });
+  assert.ok(r.count > 0);
+  const raw = JSON.parse(readFileSync(new URL("./fixtures/servers.json", import.meta.url))).servers;
+  for (const s of r.results) {
+    const x = raw.find(row => row.slug === s.slug);
+    assert.ok((x.clients_mentioned || []).some(c => c.toLowerCase() === "cursor"), s.slug);
+  }
+});
+
 
 test("trending and recently_updated", async () => {
   const { j: t } = await call("trending_servers", { days: 730, limit: 5 });

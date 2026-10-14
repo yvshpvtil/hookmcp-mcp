@@ -1,6 +1,6 @@
 import type { Dataset, Server } from "./data.js";
 
-export interface SearchOpts { query?: string; category?: string; remote?: boolean; maintained?: boolean; no_key?: boolean; official?: boolean; one_click?: boolean; language?: string; min_stars?: number; limit?: number }
+export interface SearchOpts { query?: string; category?: string; topic?: string; client?: string; remote?: boolean; maintained?: boolean; no_key?: boolean; official?: boolean; one_click?: boolean; language?: string; min_stars?: number; limit?: number }
 
 /** Bounded Levenshtein distance (returns max+1 when exceeded). */
 export function editDistance(a: string, b: string, max = 2): number {
@@ -61,8 +61,12 @@ export function search(d: Dataset, o: SearchOpts): Server[] {
   const terms = (o.query || "").toLowerCase().split(/\s+/).filter(Boolean);
   const limit = Math.min(Math.max(o.limit ?? 10, 1), 50);
   const lang = o.language?.toLowerCase();
+  const topic = o.topic?.toLowerCase().trim();
+  const client = o.client?.toLowerCase().trim();
   return d.servers
     .filter(s => (!o.category || s.category === o.category)
+      && (!topic || (s.integrations || []).some(i => i.toLowerCase() === topic) || (s.topics || []).some(t => t.toLowerCase() === topic || t.toLowerCase().replace(/-/g, " ") === topic.replace(/-/g, " ")))
+      && (!client || (s.clients_mentioned || []).some(c => c.toLowerCase() === client || c.toLowerCase().replace(/\s+/g, "-") === client || c.toLowerCase().replace(/\s+/g, "") === client.replace(/-/g, "")))
       && (!o.remote || s.remote_available) && (!o.maintained || s.status === "maintained")
       && (!o.no_key || s.api_key_hint === false) && (!o.official || s.official) && (!o.one_click || !!s.config)
       && (!lang || (s.language ?? "").toLowerCase() === lang) && (o.min_stars == null || (s.stars ?? 0) >= o.min_stars))
@@ -107,7 +111,7 @@ export function configs(s: Server, env?: Record<string, string>) {
       deeplink: "cursor://anysphere.cursor-deeplink/mcp/install?name=" + encodeURIComponent(key) + "&config=" + encodeURIComponent(Buffer.from(JSON.stringify(entry)).toString("base64")) },
     vscode: { file: ".vscode/mcp.json (workspace) or run 'MCP: Open User Configuration'", json: { servers: { [key]: { type: "stdio", ...entry } } },
       deeplink: "vscode:mcp/install?" + encodeURIComponent(JSON.stringify({ name: key, ...entry })) },
-    windsurf: { file: "~/.codeium/windsurf/mcp_config.json", json: std },
+    windsurf: { file: "~/.config/devin/mcp_config.json (Cascade → Open MCP config file; classic ~/.codeium/windsurf/mcp_config.json also common)", json: std },
     claude_code: { command: `claude mcp add ${key}${envFlags ? " " + envFlags : ""} -- ${[command, ...args].join(" ")}` },
   };
 }
@@ -146,4 +150,32 @@ export function recent(d: Dataset, o: { category?: string; limit?: number }) {
   const limit = Math.min(Math.max(o.limit ?? 10, 1), 50);
   return d.servers.filter(s => s.last_commit && (!o.category || s.category === o.category))
     .sort((a, b) => Date.parse(b.last_commit!) - Date.parse(a.last_commit!)).slice(0, limit).map(s => summary(s, d));
+}
+
+export function listIntegrations(d: Dataset) {
+  if (d.integrations?.length) return [...d.integrations].sort((a, b) => a.name.localeCompare(b.name));
+  // Fallback: derive from per-server integration slugs when the dataset predates the field
+  const n: Record<string, number> = {};
+  for (const s of d.servers) for (const i of s.integrations || []) n[i] = (n[i] || 0) + 1;
+  return Object.entries(n).sort((a, b) => a[0].localeCompare(b[0])).map(([slug, servers]) => ({ slug, name: slug, servers, url: `https://hookmcp.com/topics/${slug}/` }));
+}
+
+export function listClients(d: Dataset) {
+  if (d.clients?.length) return [...d.clients].sort((a, b) => b.servers - a.servers);
+  const n: Record<string, number> = {};
+  for (const s of d.servers) for (const c of s.clients_mentioned || []) n[c] = (n[c] || 0) + 1;
+  return Object.entries(n).sort((a, b) => b[1] - a[1]).map(([label, servers]) => {
+    const slug = label.toLowerCase().replace(/\s+/g, "-");
+    return { slug, name: label, label, servers, url: `https://hookmcp.com/clients/${slug}/` };
+  });
+}
+
+export function suggestTopic(d: Dataset, q: string): string[] {
+  const x = q.toLowerCase();
+  return listIntegrations(d).filter(i => i.slug.includes(x) || i.name.toLowerCase().includes(x) || editDistance(x, i.slug, 3) <= 2).map(i => i.slug).slice(0, 8);
+}
+
+export function suggestClient(d: Dataset, q: string): string[] {
+  const x = q.toLowerCase();
+  return listClients(d).filter(c => c.slug.includes(x) || c.name.toLowerCase().includes(x) || c.label.toLowerCase().includes(x)).map(c => c.slug).slice(0, 8);
 }

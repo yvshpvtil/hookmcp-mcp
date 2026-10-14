@@ -1,3 +1,8 @@
+## 0.2.1
+
+- `get_install_config` / `configs()` now handle remote URL listings (`config.url` + Streamable HTTP), with an `mcp-remote` stdio bridge fallback.
+- Dataset type accepts optional `remote_url`, `listing_kind`, `quality_grade`, `quality_score`.
+
 # Changelog
 
 ## 0.2.0 (unreleased)

@@ -100,7 +100,28 @@ export type ClientId = typeof CLIENTS[number];
 
 export function configs(s: Server, env?: Record<string, string>) {
   if (!s.config) return null;
-  const { key, command, args } = s.config;
+  const { key } = s.config;
+  // Remote / Streamable HTTP: config.url (vendor-hosted). Prefer URL entry over stdio bridge.
+  if (s.config.url) {
+    const url = s.config.url;
+    const e = env && Object.keys(env).length ? { env } : {};
+    const httpEntry = { url, ...e };
+    const std = { mcpServers: { [key]: httpEntry } };
+    const bridge = { command: "npx", args: ["-y", "mcp-remote", url], ...e };
+    const bridgeStd = { mcpServers: { [key]: bridge } };
+    return {
+      claude_desktop: { file: "claude_desktop_config.json (macOS: ~/Library/Application Support/Claude/, Windows: %APPDATA%\\Claude\\)", json: std, note: "Remote URL; client must support Streamable HTTP / OAuth. Fallback: mcp-remote stdio bridge." },
+      cursor: { file: "~/.cursor/mcp.json (global) or .cursor/mcp.json (project)", json: std,
+        deeplink: "cursor://anysphere.cursor-deeplink/mcp/install?name=" + encodeURIComponent(key) + "&config=" + encodeURIComponent(Buffer.from(JSON.stringify(httpEntry)).toString("base64")) },
+      vscode: { file: ".vscode/mcp.json (workspace) or run 'MCP: Open User Configuration'", json: { servers: { [key]: { type: "http", url, ...e } } },
+        deeplink: "vscode:mcp/install?" + encodeURIComponent(JSON.stringify({ name: key, type: "http", url, ...e })) },
+      windsurf: { file: "~/.config/devin/mcp_config.json (Cascade → Open MCP config file; classic ~/.codeium/windsurf/mcp_config.json also common)", json: std },
+      claude_code: { command: `claude mcp add --transport http ${key} ${url}`, note: "Or use stdio bridge: claude mcp add " + key + " -- npx -y mcp-remote " + url },
+      stdio_bridge: { json: bridgeStd, command: `npx -y mcp-remote ${url}` },
+    };
+  }
+  if (!s.config.command || !s.config.args) return null;
+  const command = s.config.command, args = s.config.args;
   const e = env && Object.keys(env).length ? { env } : {};
   const entry = { command, args, ...e };
   const std = { mcpServers: { [key]: entry } };

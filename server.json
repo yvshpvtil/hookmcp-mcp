@@ -3,19 +3,33 @@
   "name": "io.github.yvshpvtil/hookmcp-mcp",
   "title": "HookMCP",
   "description": "Search the HookMCP directory of 800+ MCP servers and get ready-to-paste client configs.",
-  "repository": { "url": "https://github.com/yvshpvtil/hookmcp-mcp", "source": "github" },
+  "repository": {
+    "url": "https://github.com/yvshpvtil/hookmcp-mcp",
+    "source": "github"
+  },
   "websiteUrl": "https://hookmcp.com/mcp/",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "packages": [
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "hookmcp-mcp",
-      "version": "0.2.0",
-      "transport": { "type": "stdio" },
+      "version": "0.2.1",
+      "transport": {
+        "type": "stdio"
+      },
       "environmentVariables": [
-        { "name": "HOOKMCP_CACHE_TTL_MS", "description": "Cache lifetime in milliseconds (default 6h)", "isRequired": false, "format": "number" },
-        { "name": "HOOKMCP_CACHE_FILE", "description": "On-disk cache path, or 'off'", "isRequired": false }
+        {
+          "name": "HOOKMCP_CACHE_TTL_MS",
+          "description": "Cache lifetime in milliseconds (default 6h)",
+          "isRequired": false,
+          "format": "number"
+        },
+        {
+          "name": "HOOKMCP_CACHE_FILE",
+          "description": "On-disk cache path, or 'off'",
+          "isRequired": false
+        }
       ]
     }
   ]

@@ -29,3 +29,19 @@ test("topic and client filters", () => {
   assert.equal(search(d, { client: "cursor" })[0].name, "Pg");
   assert.equal(search(d, { client: "Cursor" })[0].name, "Pg");
 });
+
+
+test("configs: remote url configs", async () => {
+  const { configs } = await import("../dist/logic.js");
+  const s = mk({ name: "Notion", slug: "notion-official-remote", config: { key: "notion", url: "https://mcp.notion.com/mcp", transport: "http" } });
+  const c = configs(s);
+  assert.ok(c);
+  assert.equal(c.cursor.json.mcpServers.notion.url, "https://mcp.notion.com/mcp");
+  assert.equal(c.vscode.json.servers.notion.type, "http");
+  assert.match(c.claude_code.command, /--transport http/);
+  assert.equal(c.stdio_bridge.json.mcpServers.notion.args[2], "https://mcp.notion.com/mcp");
+  // stdio path still works
+  const local = configs(mk({ name: "Pg", config: { key: "pg", command: "npx", args: ["-y", "pg"] } }));
+  assert.equal(local.cursor.json.mcpServers.pg.command, "npx");
+  assert.equal(local.stdio_bridge, undefined);
+});

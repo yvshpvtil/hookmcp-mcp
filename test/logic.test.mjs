@@ -45,3 +45,20 @@ test("configs: remote url configs", async () => {
   assert.equal(local.cursor.json.mcpServers.pg.command, "npx");
   assert.equal(local.stdio_bridge, undefined);
 });
+
+test("findServer/detail: remotes with null repo_url (0.2.2)", async () => {
+  const { findServer, detail } = await import("../dist/logic.js");
+  const remote = mk({ name: "Jam MCP (official remote)", slug: "jam-official-remote", repo_url: null, homepage: "https://jam.dev/docs/debug-a-jam/mcp", listing_kind: "remote", remote_url: "https://mcp.jam.dev/mcp", clients_mentioned: [], config: { key: "jam", url: "https://mcp.jam.dev/mcp", transport: "http" }, tools: ["getDetails", "getConsoleLogs"], tools_source: "https://jam.dev/docs/debug-a-jam/mcp" });
+  const local = mk({ name: "Pg", slug: "x-pg", repo_url: "https://github.com/x/pg", clients_mentioned: [] });
+  const d = { categories: {}, servers: [remote, local] };
+  assert.equal(findServer(d, "Pg").slug, "x-pg");
+  assert.equal(findServer(d, "https://github.com/x/pg/").slug, "x-pg");
+  assert.equal(findServer(d, "https://mcp.jam.dev/mcp").slug, "jam-official-remote");
+  assert.equal(findServer(d, "nope-not-real"), undefined);
+  const j = detail(remote, d);
+  assert.equal(j.remote_url, "https://mcp.jam.dev/mcp");
+  assert.deepEqual(j.tools, ["getDetails", "getConsoleLogs"]);
+  assert.equal(j.tools_count, 2);
+  assert.match(j.notes[0], /Vendor-hosted/);
+  assert.equal(detail(local, d).tools, undefined);
+});

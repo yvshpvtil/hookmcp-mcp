@@ -1,3 +1,11 @@
+## 0.2.2
+
+- Fix: `get_server` / `get_install_config` no longer crash with a TypeError on name or unknown-slug lookups when the dataset contains vendor-hosted remotes (`repo_url: null`); unknown slugs get the "Did you mean" error again.
+- Lookups also accept a remote MCP endpoint URL (e.g. `https://mcp.notion.com/mcp`).
+- `get_server` for remotes returns `listing_kind`, `remote_url`, remote-specific notes (OAuth sign-in, vendor docs) and, when HookMCP has them, the vendor-documented `tools` list (`tools`, `tools_count`, `tools_source`).
+- "No config" errors link to the repo, else the vendor docs, else the HookMCP page (never `null`).
+- package-lock.json version synced.
+
 ## 0.2.1
 
 - `get_install_config` / `configs()` now handle remote URL listings (`config.url` + Streamable HTTP), with an `mcp-remote` stdio bridge fallback.

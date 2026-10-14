@@ -19,7 +19,7 @@ Example prompts: *"Find a maintained Postgres MCP server that doesn't need an AP
 | Tool | What it does |
 |---|---|
 | `search_servers` | Typo-tolerant keyword search (`postgress`, `k8s` and plurals work) with `category`, `topic` (integration slug), `client` (e.g. `cursor`), `language`, `min_stars`, `remote`, `maintained` (commit ≤ 90 days), `no_key`, `official`, `one_click` filters and `limit` (≤ 50) |
-| `get_server` | Description, repo, license, install command (and where it came from), plus configs for every client. Accepts slug, hookmcp.com URL, GitHub URL or exact name |
+| `get_server` | Description, repo, license, install command (and where it came from), plus configs for every client. Accepts slug, hookmcp.com URL, GitHub URL, remote MCP endpoint URL or exact name. Vendor-hosted remotes include the vendor-documented tool list |
 | `get_install_config` | Ready-to-paste config for one server and one client (`claude_desktop`, `cursor`, `vscode`, `windsurf`, `claude_code`) or all, optionally with `env` vars (API keys) filled in |
 | `list_categories` | Category ids, names and counts |
 | `list_integrations` | Integration pages (Postgres, GitHub, Slack, …) with slugs and URLs — use a slug as `topic` on `search_servers` |

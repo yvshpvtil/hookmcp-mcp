@@ -3,7 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { getData, DATA_URL, type Dataset } from "./data.js";
-import { search, summary, detail, findServer, categories, trending, recent, configs, suggestCategory, listIntegrations, listClients, suggestTopic, suggestClient, CLIENTS } from "./logic.js";
+import { search, summary, detail, findServer, categories, trending, recent, configs, suggestCategory, listIntegrations, listClients, suggestTopic, suggestClient, CLIENTS, isRemote, docsLink } from "./logic.js";
 import { VERSION } from "./version.js";
 
 const HELP = `hookmcp-mcp ${VERSION}
@@ -93,7 +93,7 @@ server.registerTool("search_servers", {
 
 server.registerTool("get_server", {
   title: "Get MCP server details and configs",
-  description: "Full details for one server: description, repo, install command and ready-to-paste configs for Claude Desktop, Cursor, VS Code, Windsurf and Claude Code. Accepts a slug from search results, a hookmcp.com/tools URL, a GitHub repo URL, or an exact name.",
+  description: "Full details for one server: description, repo, install command and ready-to-paste configs for Claude Desktop, Cursor, VS Code, Windsurf and Claude Code. Accepts a slug from search results, a hookmcp.com/tools URL, a GitHub repo URL, a remote MCP endpoint URL, or an exact name. Vendor-hosted remotes also list the tool names from the vendor docs.",
   inputSchema: { slug: z.string().min(1).describe("Server slug, hookmcp.com URL, repo URL or exact name") }, annotations: ro,
 }, wrap(({ slug }, d) => detail(resolve(d, slug), d)));
 
@@ -108,9 +108,9 @@ server.registerTool("get_install_config", {
 }, wrap(({ slug, client, env }, d) => {
   const s = resolve(d, slug);
   const c = configs(s, env);
-  if (!c) throw new UserError(`"${s.name}" has no ready-made config in HookMCP.${s.install_command ? ` Install command: ${s.install_command}.` : ""} See the README: ${s.repo_url}`);
+  if (!c) throw new UserError(`"${s.name}" has no ready-made config in HookMCP.${s.install_command ? ` Install command: ${s.install_command}.` : ""} See: ${docsLink(s)}`);
   const base = { slug: s.slug, name: s.name, repo_url: s.repo_url,
-    note: (s.api_key_hint && !env ? "The README mentions API keys/tokens: pass them via the `env` argument or add an \"env\" block. " : "") + "Verify against the project README before running; restart the client after editing its config." };
+    note: (s.api_key_hint && !env ? "The README mentions API keys/tokens: pass them via the `env` argument or add an \"env\" block. " : "") + (isRemote(s) ? "Vendor-hosted remote: your client will ask you to sign in on first connect. Verify the endpoint in the vendor docs; " : "Verify against the project README before running; ") + "restart the client after editing its config." };
   if (!client || client === "all") return { ...base, configs: c };
   return { ...base, client, ...c[client] };
 }));

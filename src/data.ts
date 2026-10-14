@@ -4,13 +4,15 @@ import { join, dirname } from "node:path";
 import { VERSION } from "./version.js";
 
 export interface Server {
-  slug: string; name: string; owner: string; repo_url: string; homepage: string | null;
+  slug: string; name: string; owner: string; repo_url: string | null; homepage: string | null;
   description: string | null; category: string; status: "maintained" | "aging" | "stale" | null;
   stars: number | null; official: boolean; remote_available: boolean; api_key_hint: boolean | null;
   license: string | null; language: string | null; clients_mentioned: string[]; topics: string[];
   integrations?: string[];
   last_commit: string | null; created_at: string | null; install_command: string | null;
   install_source: string | null; config: { key: string; command?: string; args?: string[]; url?: string; transport?: string } | null; url: string; remote_url?: string | null; listing_kind?: string | null; quality_grade?: string | null; quality_score?: number | null;
+  /** Tool names as listed in the vendor's docs (curated remotes only). */
+  tools?: string[]; tools_source?: string | null;
 }
 export interface Integration { slug: string; name: string; servers: number; url: string; blurb?: string }
 export interface ClientInfo { slug: string; name: string; label: string; servers: number; url: string; docs?: string; blurb?: string }

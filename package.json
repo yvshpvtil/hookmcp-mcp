@@ -1,6 +1,6 @@
 {
   "name": "hookmcp-mcp",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Read-only MCP server to search the HookMCP directory of 800+ MCP servers and get ready-to-paste configs for Claude Desktop, Cursor, VS Code and Claude Code.",
   "type": "module",
   "bin": {

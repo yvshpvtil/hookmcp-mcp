@@ -139,16 +139,33 @@ export function configs(s: Server, env?: Record<string, string>) {
 
 export function detail(s: Server, d: Dataset) {
   const src = s.install_source === "readme" ? "taken from the project README" : s.install_source === "package-derived" ? "derived from the package in the official MCP Registry" : null;
+  const remote = isRemote(s);
   return { ...summary(s, d), owner: s.owner, repo_url: s.repo_url, homepage: s.homepage, license: s.license, language: s.language,
+    ...(remote ? { listing_kind: "remote", remote_url: s.remote_url ?? s.config?.url ?? null } : {}),
     clients_documented: s.clients_mentioned, topics: s.topics, install_command: s.install_command, install_command_source: src,
+    ...(s.tools?.length ? { tools: s.tools, tools_count: s.tools.length, tools_source: s.tools_source ?? s.homepage } : {}),
     configs: configs(s),
-    notes: [s.api_key_hint ? "The README mentions API keys/tokens: add them under \"env\" in the config." : "Check the README for any required environment variables.",
-      "Data is automatically collected; verify against the project README before running."] };
+    notes: remote
+      ? ["Vendor-hosted remote server: no local install. Your client signs in (usually OAuth) when it first connects; some vendors also accept an API key header — see the vendor docs.",
+        "Data is curated from the vendor's public docs; verify the endpoint there before connecting."]
+      : [s.api_key_hint ? "The README mentions API keys/tokens: add them under \"env\" in the config." : "Check the README for any required environment variables.",
+        "Data is automatically collected; verify against the project README before running."] };
+}
+
+export function isRemote(s: Server): boolean {
+  return s.listing_kind === "remote" || (!!s.config?.url && !s.config?.command);
+}
+
+/** Best link for "where do I read more": repo, then vendor docs, then the HookMCP page. */
+export function docsLink(s: Server): string {
+  return s.repo_url || s.homepage || s.url;
 }
 
 export function findServer(d: Dataset, slug: string): Server | undefined {
   const q = slug.trim().toLowerCase().replace(/^https?:\/\/hookmcp\.com\/tools\//, "").replace(/\/$/, "");
-  return d.servers.find(s => s.slug === q) || d.servers.find(s => s.repo_url.toLowerCase().replace(/\/$/, "") === q)
+  const bare = (u: string | null | undefined) => (u || "").toLowerCase().replace(/\/$/, "");
+  return d.servers.find(s => s.slug === q) || d.servers.find(s => !!s.repo_url && bare(s.repo_url) === q)
+    || d.servers.find(s => !!s.remote_url && bare(s.remote_url) === q)
     || d.servers.find(s => s.name.toLowerCase() === q);
 }
 

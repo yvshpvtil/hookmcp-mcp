@@ -3,7 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { getData, DATA_URL, type Dataset } from "./data.js";
-import { search, summary, detail, findServer, categories, trending, recent, configs, suggestCategory, listIntegrations, listClients, suggestTopic, suggestClient, CLIENTS, isRemote, docsLink } from "./logic.js";
+import { search, summary, detail, findServer, categories, trending, recent, configs, suggestCategory, listIntegrations, listClients, suggestTopic, suggestClient, CLIENTS, isRemote, docsLink, matchedTools } from "./logic.js";
 import { VERSION } from "./version.js";
 
 const HELP = `hookmcp-mcp ${VERSION}
@@ -59,7 +59,8 @@ const lim = z.number().int().min(1).max(50).optional().describe("Max results (de
 server.registerTool("search_servers", {
   title: "Search MCP servers",
   description: "Search the HookMCP directory (https://hookmcp.com) of 800+ MCP servers by keyword (typo-tolerant), category and filters. Returns matches ranked by relevance, then GitHub stars. Use get_install_config for ready-to-paste configs.",
-  inputSchema: { query: z.string().optional().describe("Keywords, e.g. 'postgres' or 'browser automation'. Empty = top servers"), category: cat,
+  inputSchema: { query: z.string().optional().describe("Keywords, e.g. 'postgres' or 'browser automation'. An exact tool name such as 'create_issue' also matches remotes that list it. Empty = top servers"), category: cat,
+    tool: z.string().optional().describe("Only servers whose vendor docs list this exact tool name, e.g. 'execute_sql' or 'create_issue' ('-' and '_' are treated alike)"),
     topic: z.string().optional().describe("Integration slug from list_integrations, e.g. 'postgres', 'slack', 'playwright'"),
     client: z.string().optional().describe("AI client from list_clients, e.g. 'cursor', 'claude-desktop', 'vscode' (or display name)"),
     language: z.string().optional().describe("Implementation language, e.g. 'TypeScript', 'Python', 'Go' (case-insensitive)"),
@@ -88,7 +89,9 @@ server.registerTool("search_servers", {
     }
   }
   const r = search(d, a);
-  return { count: r.length, results: r.map(s => summary(s, d)), ...(r.length ? {} : { hint: "No matches. Try fewer keywords or remove filters." }) };
+  const terms = [...(a.query || "").split(/\s+/).filter(Boolean), ...(a.tool ? [a.tool] : [])];
+  return { count: r.length, results: r.map(s => { const m = matchedTools(s, terms); return { ...summary(s, d), ...(m.length ? { matched_tools: m } : {}) }; }),
+    ...(r.length ? {} : { hint: a.tool ? `No listing documents a tool named "${a.tool}". Tool lists cover vendor-hosted remotes only; try a keyword query instead.` : "No matches. Try fewer keywords or remove filters." }) };
 }));
 
 server.registerTool("get_server", {

@@ -62,3 +62,30 @@ test("findServer/detail: remotes with null repo_url (0.2.2)", async () => {
   assert.match(j.notes[0], /Vendor-hosted/);
   assert.equal(detail(local, d).tools, undefined);
 });
+
+test("search: tool-name matching, tool filter, matchedTools and tools cap (0.2.3)", async () => {
+  const { search, matchedTools, detail, summary, TOOLS_CAP } = await import("../dist/logic.js");
+  const many = Array.from({ length: 150 }, (_, i) => `tool_${i}`);
+  const gh = mk({ name: "GitHub MCP (official remote)", slug: "github-official-remote", listing_kind: "remote", repo_url: null, clients_mentioned: [], tools: ["create_issue", "list_issues"], tools_source: "https://github.com/github/github-mcp-server#tools", stars: null });
+  const sb = mk({ name: "Supabase MCP (official remote)", slug: "supabase-official-remote", listing_kind: "remote", repo_url: null, clients_mentioned: [], tools: ["execute_sql", "list_tables"], stars: null });
+  const big = mk({ name: "Big", slug: "big-official-remote", listing_kind: "remote", repo_url: null, clients_mentioned: [], tools: many, tools_source: "https://example.com/tools" });
+  const other = mk({ name: "Issue tracker helper", slug: "x-issues", description: "track issues", clients_mentioned: [], stars: 500 });
+  const d = { categories: {}, servers: [gh, sb, big, other] };
+  // exact tool name in the query finds the remote that lists it
+  assert.equal(search(d, { query: "create_issue" })[0].slug, "github-official-remote");
+  assert.equal(search(d, { query: "execute-sql" })[0].slug, "supabase-official-remote");
+  // tool filter is exact and excludes servers without tool lists
+  assert.deepEqual(search(d, { tool: "EXECUTE_SQL" }).map(s => s.slug), ["supabase-official-remote"]);
+  assert.equal(search(d, { tool: "no_such_tool" }).length, 0);
+  assert.deepEqual(matchedTools(gh, ["create_issue", "foo"]), ["create_issue"]);
+  assert.deepEqual(matchedTools(other, ["create_issue"]), []);
+  assert.equal(summary(gh, d).tools_count, 2);
+  assert.equal(summary(other, d).tools_count, undefined);
+  // get_server caps very long vendor catalogs but reports the full count
+  const j = detail(big, d);
+  assert.equal(j.tools.length, TOOLS_CAP);
+  assert.equal(j.tools_count, 150);
+  assert.equal(j.tools_truncated, true);
+  assert.match(j.tools_note, /first 100 of 150/);
+  assert.equal(detail(gh, d).tools_truncated, undefined);
+});

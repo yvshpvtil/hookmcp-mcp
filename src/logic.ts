@@ -1,6 +1,6 @@
 import type { Dataset, Server } from "./data.js";
 
-export interface SearchOpts { query?: string; category?: string; topic?: string; client?: string; remote?: boolean; maintained?: boolean; no_key?: boolean; official?: boolean; one_click?: boolean; language?: string; min_stars?: number; limit?: number }
+export interface SearchOpts { query?: string; tool?: string; category?: string; topic?: string; client?: string; remote?: boolean; maintained?: boolean; no_key?: boolean; official?: boolean; one_click?: boolean; language?: string; min_stars?: number; limit?: number }
 
 /** Bounded Levenshtein distance (returns max+1 when exceeded). */
 export function editDistance(a: string, b: string, max = 2): number {
@@ -16,6 +16,15 @@ export function editDistance(a: string, b: string, max = 2): number {
     prev = cur;
   }
   return prev[b.length];
+}
+
+/** Normalise a tool name for comparison: lower-case, '-' and '_' treated alike. */
+export const toolKey = (x: string) => x.trim().toLowerCase().replace(/-/g, "_");
+/** Vendor-documented tool names on this server that equal one of the query terms (or the tool filter). */
+export function matchedTools(s: Server, terms: string[]): string[] {
+  if (!s.tools?.length || !terms.length) return [];
+  const want = new Set(terms.map(toolKey));
+  return s.tools.filter(t => want.has(toolKey(t)));
 }
 
 const tokens = (x: string) => x.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
@@ -45,10 +54,12 @@ export function score(s: Server, terms: string[]): number {
   const name = s.name.toLowerCase(), slug = s.slug.toLowerCase(), nameToks = tokens(s.name).map(norm);
   const hay = [s.description, s.owner, s.category, s.language, ...(s.topics || [])].join(" ").toLowerCase();
   const hayToks = tokens(hay).map(norm);
+  const toolKeys = new Set((s.tools || []).map(toolKey));
   let sc = 0;
   for (const raw of terms) {
     const variants = [raw, norm(raw), ...(ALIASES[raw] || [])];
-    const best = Math.max(...variants.map(t => termScore(t, name, nameToks, slug, hay, hayToks)));
+    // An exact vendor-documented tool name (e.g. "create_issue") counts as a strong match.
+    const best = Math.max(toolKeys.has(toolKey(raw)) ? 4 : 0, ...variants.map(t => termScore(t, name, nameToks, slug, hay, hayToks)));
     if (best === 0) return 0; // every term must match somewhere
     sc += best;
   }
@@ -63,12 +74,14 @@ export function search(d: Dataset, o: SearchOpts): Server[] {
   const lang = o.language?.toLowerCase();
   const topic = o.topic?.toLowerCase().trim();
   const client = o.client?.toLowerCase().trim();
+  const tool = o.tool?.trim() ? toolKey(o.tool) : "";
   return d.servers
     .filter(s => (!o.category || s.category === o.category)
       && (!topic || (s.integrations || []).some(i => i.toLowerCase() === topic) || (s.topics || []).some(t => t.toLowerCase() === topic || t.toLowerCase().replace(/-/g, " ") === topic.replace(/-/g, " ")))
       && (!client || (s.clients_mentioned || []).some(c => c.toLowerCase() === client || c.toLowerCase().replace(/\s+/g, "-") === client || c.toLowerCase().replace(/\s+/g, "") === client.replace(/-/g, "")))
       && (!o.remote || s.remote_available) && (!o.maintained || s.status === "maintained")
       && (!o.no_key || s.api_key_hint === false) && (!o.official || s.official) && (!o.one_click || !!s.config)
+      && (!tool || (s.tools || []).some(t => toolKey(t) === tool))
       && (!lang || (s.language ?? "").toLowerCase() === lang) && (o.min_stars == null || (s.stars ?? 0) >= o.min_stars))
     .map(s => [s, score(s, terms)] as const).filter(([, sc]) => sc > 0)
     // log-stars tiebreak nudges popular projects up without drowning relevance
@@ -92,7 +105,7 @@ export function summary(s: Server, d: Dataset) {
   return { slug: s.slug, name: s.name, description: s.description, category: d.categories[s.category] ?? s.category,
     stars: s.stars, status: s.status, last_commit: s.last_commit?.slice(0, 10) ?? null, official: s.official,
     remote_available: s.remote_available, api_key: s.api_key_hint === true ? "likely required" : s.api_key_hint === false ? "not mentioned" : "unknown",
-    one_click_config: !!s.config, url: s.url };
+    one_click_config: !!s.config, ...(s.tools?.length ? { tools_count: s.tools.length } : {}), url: s.url };
 }
 
 export const CLIENTS = ["claude_desktop", "cursor", "vscode", "windsurf", "claude_code"] as const;
@@ -137,13 +150,17 @@ export function configs(s: Server, env?: Record<string, string>) {
   };
 }
 
+/** Max tool names returned by get_server (some vendors document 1,000+). */
+export const TOOLS_CAP = 100;
+
 export function detail(s: Server, d: Dataset) {
   const src = s.install_source === "readme" ? "taken from the project README" : s.install_source === "package-derived" ? "derived from the package in the official MCP Registry" : null;
   const remote = isRemote(s);
   return { ...summary(s, d), owner: s.owner, repo_url: s.repo_url, homepage: s.homepage, license: s.license, language: s.language,
     ...(remote ? { listing_kind: "remote", remote_url: s.remote_url ?? s.config?.url ?? null } : {}),
     clients_documented: s.clients_mentioned, topics: s.topics, install_command: s.install_command, install_command_source: src,
-    ...(s.tools?.length ? { tools: s.tools, tools_count: s.tools.length, tools_source: s.tools_source ?? s.homepage } : {}),
+    ...(s.tools?.length ? { tools: s.tools.slice(0, TOOLS_CAP), tools_count: s.tools.length, tools_source: s.tools_source ?? s.homepage,
+      ...(s.tools.length > TOOLS_CAP ? { tools_truncated: true, tools_note: `Showing the first ${TOOLS_CAP} of ${s.tools.length} vendor-documented tool names. Full list: ${s.url}#tools (or ${s.tools_source ?? s.homepage}). Use search_servers with tool="<name>" to check a specific tool.` } : {}) } : {}),
     configs: configs(s),
     notes: remote
       ? ["Vendor-hosted remote server: no local install. Your client signs in (usually OAuth) when it first connects; some vendors also accept an API key header — see the vendor docs.",

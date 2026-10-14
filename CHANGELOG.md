@@ -1,3 +1,9 @@
+## 0.2.3
+
+- `search_servers`: an exact vendor-documented tool name in `query` (e.g. `create_issue`, `execute-sql`; `-` and `_` treated alike) now matches the remotes that list it, and a new `tool` filter returns only servers whose vendor docs list that exact tool. Results include `matched_tools` when a tool name matched, and `tools_count` for listings with a tool list.
+- `get_server`: tool lists are capped at the first 100 names (some vendors document 1,000+); `tools_count` stays the full count, with `tools_truncated` and a `tools_note` pointing to the full list.
+- The HookMCP dataset now carries vendor-documented tool lists for 39 of 53 remotes (was 12).
+
 ## 0.2.2
 
 - Fix: `get_server` / `get_install_config` no longer crash with a TypeError on name or unknown-slug lookups when the dataset contains vendor-hosted remotes (`repo_url: null`); unknown slugs get the "Did you mean" error again.

@@ -10,10 +10,12 @@ export interface Server {
   license: string | null; language: string | null; clients_mentioned: string[]; topics: string[];
   integrations?: string[];
   last_commit: string | null; created_at: string | null; install_command: string | null;
-  install_source: string | null; config: { key: string; command?: string; args?: string[]; url?: string; transport?: string } | null; url: string; remote_url?: string | null; listing_kind?: string | null; quality_grade?: string | null; quality_score?: number | null;
+  install_source: string | null; config: { key: string; command?: string; args?: string[]; url?: string; transport?: string; client_overrides?: Partial<Record<"claude_code" | "codex", ClientOverride>> } | null; url: string; remote_url?: string | null; listing_kind?: string | null; quality_grade?: string | null; quality_score?: number | null;
   /** Tool names as listed in the vendor's docs (curated remotes only). */
   tools?: string[]; tools_source?: string | null;
 }
+/** Vendor-documented command for a client where the generic one is wrong (e.g. GitHub's remote needs a PAT header in Claude Code). */
+export interface ClientOverride { command: string; note?: string; source?: string }
 export interface Integration { slug: string; name: string; servers: number; url: string; blurb?: string }
 export interface ClientInfo { slug: string; name: string; label: string; servers: number; url: string; docs?: string; blurb?: string }
 export interface Dataset { categories: Record<string, string>; servers: Server[]; integrations?: Integration[]; clients?: ClientInfo[]; fetchedAt: number; source: string; stale?: boolean }

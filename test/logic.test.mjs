@@ -89,3 +89,27 @@ test("search: tool-name matching, tool filter, matchedTools and tools cap (0.2.3
   assert.match(j.tools_note, /first 100 of 150/);
   assert.equal(detail(gh, d).tools_truncated, undefined);
 });
+
+test("configs: vendor client_overrides replace generic Claude Code command and add Codex (0.2.4)", async () => {
+  const { configs } = await import("../dist/logic.js");
+  const gh = mk({ name: "GitHub remote", listing_kind: "remote", config: { key: "github", url: "https://api.githubcopilot.com/mcp/", transport: "http",
+    client_overrides: { claude_code: { command: "claude mcp add-json github '{\"type\":\"http\"}'", note: "needs PAT", source: "https://example.com/claude" },
+      codex: { command: "codex mcp add github --url https://api.githubcopilot.com/mcp/ --bearer-token-env-var GITHUB_PAT_TOKEN", source: "https://example.com/codex" } } } });
+  const c = configs(gh);
+  assert.match(c.claude_code.command, /^claude mcp add-json github/);
+  assert.equal(c.claude_code.note, "needs PAT");
+  assert.equal(c.claude_code.source, "https://example.com/claude");
+  assert.match(c.codex.command, /--bearer-token-env-var GITHUB_PAT_TOKEN$/);
+  assert.equal(c.cursor.json.mcpServers.github.url, "https://api.githubcopilot.com/mcp/");
+  const plain = configs(mk({ name: "Notion", config: { key: "notion", url: "https://mcp.notion.com/mcp", transport: "http" } }));
+  assert.equal(plain.claude_code.command, "claude mcp add --transport http notion https://mcp.notion.com/mcp");
+  assert.equal(plain.codex, undefined);
+});
+
+test("topic filter trusts integrations over raw GitHub topic tags when the dataset has them (0.2.4)", () => {
+  const servers = [mk({ name: "Real", integrations: ["github"], topics: [] }), mk({ name: "Tagged", integrations: [], topics: ["github", "github-actions"] })];
+  const withInteg = { categories: {}, integrations: [{ slug: "github", name: "GitHub", servers: 1, url: "https://hookmcp.com/topics/github/" }], servers };
+  assert.deepEqual(search(withInteg, { topic: "github" }).map(s => s.name), ["Real"]);
+  const legacy = { categories: {}, servers };
+  assert.deepEqual(search(legacy, { topic: "github" }).map(s => s.name).sort(), ["Real", "Tagged"]);
+});

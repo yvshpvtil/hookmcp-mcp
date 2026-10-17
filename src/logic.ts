@@ -68,6 +68,14 @@ export function score(s: Server, terms: string[]): number {
   return sc;
 }
 
+/** Topic filter. When HookMCP publishes integration lists, trust those only: raw GitHub topic tags such as
+ * "github" or "github-actions" are on many repos that don't integrate with that service. */
+function topicMatch(s: Server, topic: string, hasInteg: boolean): boolean {
+  if ((s.integrations || []).some(i => i.toLowerCase() === topic)) return true;
+  if (hasInteg) return false;
+  return (s.topics || []).some(t => t.toLowerCase() === topic || t.toLowerCase().replace(/-/g, " ") === topic.replace(/-/g, " "));
+}
+
 export function search(d: Dataset, o: SearchOpts): Server[] {
   const terms = (o.query || "").toLowerCase().split(/\s+/).filter(Boolean);
   const limit = Math.min(Math.max(o.limit ?? 10, 1), 50);
@@ -75,9 +83,10 @@ export function search(d: Dataset, o: SearchOpts): Server[] {
   const topic = o.topic?.toLowerCase().trim();
   const client = o.client?.toLowerCase().trim();
   const tool = o.tool?.trim() ? toolKey(o.tool) : "";
+  const hasInteg = !!d.integrations?.length;
   return d.servers
     .filter(s => (!o.category || s.category === o.category)
-      && (!topic || (s.integrations || []).some(i => i.toLowerCase() === topic) || (s.topics || []).some(t => t.toLowerCase() === topic || t.toLowerCase().replace(/-/g, " ") === topic.replace(/-/g, " ")))
+      && (!topic || topicMatch(s, topic, hasInteg))
       && (!client || (s.clients_mentioned || []).some(c => c.toLowerCase() === client || c.toLowerCase().replace(/\s+/g, "-") === client || c.toLowerCase().replace(/\s+/g, "") === client.replace(/-/g, "")))
       && (!o.remote || s.remote_available) && (!o.maintained || s.status === "maintained")
       && (!o.no_key || s.api_key_hint === false) && (!o.official || s.official) && (!o.one_click || !!s.config)
@@ -112,6 +121,17 @@ export const CLIENTS = ["claude_desktop", "cursor", "vscode", "windsurf", "claud
 export type ClientId = typeof CLIENTS[number];
 
 export function configs(s: Server, env?: Record<string, string>) {
+  const base = baseConfigs(s, env);
+  const ov = s.config?.client_overrides;
+  if (!base || !ov) return base;
+  const out: Record<string, unknown> = { ...base };
+  // Vendor-documented commands win over the generic ones (source kept so clients can show where it came from).
+  if (ov.claude_code) out.claude_code = { command: ov.claude_code.command, ...(ov.claude_code.note ? { note: ov.claude_code.note } : {}), ...(ov.claude_code.source ? { source: ov.claude_code.source } : {}) };
+  if (ov.codex) out.codex = { command: ov.codex.command, ...(ov.codex.note ? { note: ov.codex.note } : {}), ...(ov.codex.source ? { source: ov.codex.source } : {}) };
+  return out as typeof base;
+}
+
+function baseConfigs(s: Server, env?: Record<string, string>) {
   if (!s.config) return null;
   const { key } = s.config;
   // Remote / Streamable HTTP: config.url (vendor-hosted). Prefer URL entry over stdio bridge.

@@ -1,3 +1,8 @@
+## 0.2.4
+
+- `get_install_config` / `get_server`: when HookMCP publishes a vendor-documented command for a client (`config.client_overrides`), it replaces the generic one and keeps its `note` and `source`. First case: GitHub's hosted remote, whose Claude Code guide requires a Personal Access Token header (`claude mcp add-json github …`); a `codex` command (`--bearer-token-env-var`) is returned when documented.
+- `search_servers` `topic` filter: when the dataset carries integration lists, only those are trusted. Raw GitHub topic tags such as `github` or `github-actions` no longer pull unrelated repos into an integration (HookMCP's `/topics/github/` matcher was fixed the same day: 914 → 13 real GitHub integrations).
+
 ## 0.2.3
 
 - `search_servers`: an exact vendor-documented tool name in `query` (e.g. `create_issue`, `execute-sql`; `-` and `_` treated alike) now matches the remotes that list it, and a new `tool` filter returns only servers whose vendor docs list that exact tool. Results include `matched_tools` when a tool name matched, and `tools_count` for listings with a tool list.
